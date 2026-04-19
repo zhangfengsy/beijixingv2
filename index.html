@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>北极星 · 智能资产看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, "Inter", "PingFang SC", sans-serif;
+            color: #eef2ff;
+        }
+        body {
+            background: linear-gradient(135deg, #0a0f2a 0%, #0c1832 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .view-toggle {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .view-btn {
+            background: #1e3a5f;
+            border: 1px solid #3b6e9e;
+            padding: 6px 20px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .view-btn.active {
+            background: #2563eb;
+            border-color: #ffaa44;
+        }
+        .login-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+        .login-card {
+            background: rgba(18, 28, 45, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 36px;
+            padding: 32px 24px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(59,130,246,0.4);
+        }
+        .login-card h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 28px;
+            font-size: 24px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group input {
+            width: 100%;
+            height: 48px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid #2c4f6e;
+            border-radius: 28px;
+            padding: 0 18px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+        }
+        .error-tip {
+            color: #f87171;
+            text-align: center;
+            margin-top: 16px;
+            display: none;
+        }
+        .dashboard {
+            display: none;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .logo-title {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #90cdf4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .logout-btn {
+            background: rgba(255,80,80,0.15);
+            border: 1px solid #ff8a7a;
+            padding: 6px 16px;
+            border-radius: 40px;
+            color: #ffb4a2;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #2c5a7a;
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #cbd5e6;
+            font-size: 16px;
+            padding: 6px 16px;
+            cursor: pointer;
+            border-radius: 40px;
+        }
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        /* 原有样式保留 */
+        .two-columns { display: flex; gap: 24px; }
+        .pc-layout .two-columns { flex-direction: row; align-items: flex-start; }
+        .pc-layout .slicer-panel { width: 320px; flex-shrink: 0; }
+        .pc-layout .main-content { flex: 1; }
+        .pc-layout .metrics-grid { flex-direction: row; flex-wrap: wrap; }
+        .pc-layout .metric-card { flex: 1; min-width: 260px; }
+        .pc-layout .analysis-content { flex-direction: row; }
+        .pc-layout .surplus-group { flex-direction: row; }
+        .mobile-layout .two-columns { flex-direction: column; }
+        .mobile-layout .slicer-panel { width: 100%; }
+        .mobile-layout .metrics-grid { flex-direction: column; }
+        .mobile-layout .analysis-content { flex-direction: column; }
+        .mobile-layout .surplus-group { flex-direction: column; }
+        .slicer-panel {
+            background: rgba(10, 25, 47, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 16px 0;
+            border: 1px solid rgba(59,130,246,0.25);
+        }
+        .slicer-header { padding: 0 16px 12px; border-bottom: 1px solid #2c5a7a; margin-bottom: 12px; }
+        .slicer-header h3 { color: #b9e2ff; font-size: 16px; }
+        .slicer-group { margin-bottom: 16px; padding: 0 16px; }
+        .slicer-label { color: #9ab3d0; font-size: 13px; margin-bottom: 6px; display: block; }
+        .slicer-select { width: 100%; background: #0f2f4f; border: 1px solid #3b6e9e; border-radius: 28px; padding: 8px 14px; color: white; font-size: 14px; outline: none; }
+        .member-list { max-height: 200px; overflow-y: auto; padding: 0 12px; }
+        .member-item { padding: 8px 12px; margin: 4px 0; border-radius: 40px; color: #cbd5e6; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .member-item.active { background: #2563eb; color: white; }
+        .rank-card { margin-top: 16px; padding: 0 16px; }
+        .rank-title { color: #ffdd77; font-size: 14px; font-weight: 600; margin-bottom: 10px; border-left: 3px solid #ffaa44; padding-left: 10px; }
+        .rank-list { background: rgba(0,0,0,0.3); border-radius: 20px; padding: 8px; margin-bottom: 12px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 8px; font-size: 12px; color: #eef2ff; border-bottom: 1px dashed #2c5a7a; cursor: pointer; }
+        .main-content { width: 100%; }
+        /* 新布局样式 */
+        .core-metrics-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .core-card {
+            flex: 1;
+            background: rgba(15, 30, 55, 0.6);
+            border-radius: 24px;
+            padding: 20px 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+        }
+        .core-card .label {
+            font-size: 15px;
+            color: #9ab3d0;
+            margin-bottom: 8px;
+        }
+        .core-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffdd77;
+        }
+        .detail-metrics-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .detail-col {
+            flex: 1;
+            background: rgba(15, 30, 55, 0.6);
+            border-radius: 24px;
+            padding: 16px 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .detail-col h4 {
+            font-size: 16px;
+            color: #b9e2ff;
+            margin-bottom: 12px;
+            border-left: 3px solid #3b82f6;
+            padding-left: 10px;
+        }
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 13px;
+        }
+        .metric-item .label {
+            color: #cbd5e6;
+        }
+        .metric-item .value {
+            font-weight: 600;
+            font-family: monospace;
+        }
+        .negative-value {
+            color: #ff7e6b;
+        }
+        .positive-value {
+            color: #7aff87;
+        }
+        .analysis-card {
+            background: rgba(15, 30, 55, 0.65);
+            border-radius: 24px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+        }
+        .analysis-title {
+            font-size: 16px;
+            color: #b9e2ff;
+            margin-bottom: 12px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 12px;
+        }
+        .analysis-content {
+            display: flex;
+            gap: 20px;
+        }
+        .analysis-text {
+            flex: 1.2;
+            background: #0f2c44;
+            border-radius: 18px;
+            padding: 14px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #eef2ff;
+        }
+        .analysis-chart {
+            flex: 1;
+            background: #0f2c44;
+            border-radius: 18px;
+            padding: 12px;
+            min-height: 300px;
+        }
+        #compareChart {
+            width: 100%;
+            height: 300px;
+        }
+        .adjust-card, .daily-card {
+            background: rgba(15, 30, 55, 0.65);
+            border-radius: 24px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+        }
+        .adjust-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+        .adjust-item {
+            background: #0a2a44;
+            border-radius: 20px;
+            padding: 8px 12px;
+            flex: 1;
+            min-width: 110px;
+        }
+        .adjust-item label {
+            font-size: 12px;
+            color: #9ab3d0;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .adjust-item input {
+            background: #0f2f4f;
+            border: 1px solid #3b6e9e;
+            border-radius: 20px;
+            padding: 6px 10px;
+            width: 100%;
+            color: white;
+            font-size: 13px;
+        }
+        .btn-calc {
+            background: #2563eb;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .surplus-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .surplus-block {
+            flex: 1;
+            background: #0f2c44;
+            border-radius: 20px;
+            padding: 14px;
+            min-width: 280px;
+        }
+        .surplus-block h4 {
+            color: #b9e2ff;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .surplus-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+            color: white;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .daily-list {
+            background: rgba(0,0,0,0.3);
+            border-radius: 18px;
+            padding: 12px;
+        }
+        .daily-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .daily-badge {
+            background: #0a2a44;
+            border-radius: 32px;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: white;
+        }
+        .filter-bar {
+            background: rgba(10, 25, 47, 0.5);
+            border-radius: 24px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-item {
+            background: #0a2a44;
+            border-radius: 40px;
+            padding: 4px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-item label {
+            font-size: 12px;
+            color: #9ab3d0;
+        }
+        .filter-item select, .filter-item input {
+            background: #0f2f4f;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 8px;
+            color: white;
+            font-size: 12px;
+        }
+        .reset-btn {
+            background: #2c5282;
+            border: none;
+            border-radius: 40px;
+            padding: 4px 12px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .action-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 16px 0;
+        }
+        .btn {
+            background: #1e3a5f;
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            border: none;
+        }
+        .detail-wrapper {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 1000px;
+        }
+        .detail-table th, .detail-table td {
+            padding: 8px 6px;
+            text-align: left;
+            color: #eef2ff;
+            border-bottom: 1px solid #2c5a7a;
+        }
+        .detail-table th {
+            background: #0a2a44;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top:0;left:0;
+            width:100%;height:100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-panel {
+            background: #0c1f33;
+            border-radius: 28px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: auto;
+            padding: 20px;
+        }
+        .close-modal {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: white;
+        }
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            color: white;
+        }
+        .modal-table th, .modal-table td {
+            padding: 8px;
+            border-bottom: 1px solid #2e577a;
+            text-align: left;
+        }
+        /* 支付看板专用样式 */
+        .pay-dashboard { display: flex; flex-direction: column; gap: 20px; }
+        .pay-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .pay-stat-card { flex: 1; background: #0f2c44; border-radius: 20px; padding: 16px; text-align: center; }
+        .pay-stat-card .label { color: #9ab3d0; font-size: 14px; }
+        .pay-stat-card .value { font-size: 28px; font-weight: bold; color: #ffdd77; }
+        .three-columns { display: flex; gap: 20px; flex-wrap: wrap; }
+        .three-columns > div { flex: 1; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 16px; min-width: 260px; }
+        .pay-section h4 { color: #b9e2ff; margin-bottom: 12px; font-size: 16px; }
+        .pay-list { max-height: 400px; overflow-y: auto; }
+        .pay-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #2c5a7a; }
+        .pay-item input { margin-right: 8px; }
+        .verification-left { background: #0f2c44; border-radius: 20px; padding: 16px; margin-bottom: 20px; }
+        .available-pool { background: #0a2a44; border-radius: 16px; padding: 12px; margin: 12px 0; }
+        .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 6px; border-bottom: 1px solid #2c5a7a; }
+        .btn-danger { background: #dc2626; margin-left: 8px; padding: 2px 8px; }
+        .calendar { background: #0f2c44; border-radius: 20px; padding: 16px; margin-top: 20px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 8px; }
+        .calendar-header button { background: #2563eb; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; }
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; margin-bottom: 8px; color: #ffdd77; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .calendar-day { background: #0a2a44; border-radius: 12px; padding: 8px 4px; text-align: center; font-size: 13px; position: relative; }
+        .calendar-day .repay-amount { font-size: 11px; margin-top: 4px; }
+        .green-amount { color: #7aff87; }
+        .red-amount { color: #ff7e6b; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="loginContainer" class="login-wrapper">
+        <div class="login-card">
+            <h2>✨ 北极星 · 智能资产看板</h2>
+            <div class="input-group"><input type="text" id="loginName" placeholder="姓名 / 部门 / 小组 / admin"></div>
+            <div class="input-group"><input type="password" id="loginPwd" placeholder="密码"></div>
+            <button class="login-btn" onclick="handleLogin()">登录查询</button>
+            <div id="loginError" class="error-tip">⚠️ 姓名或密码错误</div>
+        </div>
+    </div>
+
+    <div id="dashboard" class="dashboard">
+        <div class="header-bar">
+            <div class="logo-title">📊 北极星 · 智能资产看板</div>
+            <button class="logout-btn" onclick="logout()">🚪 退出登录</button>
+        </div>
+
+        <div class="view-toggle">
+            <button id="pcViewBtn" class="view-btn active">💻 电脑版</button>
+            <button id="mobileViewBtn" class="view-btn">📱 手机版</button>
+        </div>
+
+        <div class="tabs" id="tabsContainer"></div>
+
+        <div id="appContainer" class="pc-layout">
+            <!-- 我的数据面板（新布局） -->
+            <div id="tabUser" class="tab-pane">
+                <div class="two-columns">
+                    <div class="slicer-panel">
+                        <div class="slicer-header"><h3>🔍 数据切片器</h3></div>
+                        <div class="slicer-group"><label class="slicer-label">🏢 部门</label><select id="sliceDept" class="slicer-select"><option value="all">全部部门</option></select></div>
+                        <div class="slicer-group"><label class="slicer-label">👥 小组</label><select id="sliceTeam" class="slicer-select"><option value="all">全部小组</option></select></div>
+                        <div class="slicer-group"><label class="slicer-label">👤 姓名</label><div id="memberList" class="member-list"></div></div>
+                        <div id="rankSection" style="display: none;">
+                            <div class="rank-card"><div class="rank-title">🏆 今日资产TOP榜</div><div id="topAssetRank" class="rank-list">加载中...</div></div>
+                            <div class="rank-card"><div class="rank-title">💰 今日代付TOP榜</div><div id="topPayRank" class="rank-list">加载中...</div></div>
+                            <div class="rank-card"><div class="rank-title">📅 今日付款TOP榜</div><div id="topTodayPayRank" class="rank-list">加载中...</div></div>
+                            <div class="rank-card"><div class="rank-title">💰 今日回款TOP榜</div><div id="topBackRank" class="rank-list">加载中...</div></div>
+                            <div class="rank-card"><div class="rank-title">🔒 今日保证金TOP榜</div><div id="topDepositRank" class="rank-list">加载中...</div></div>
+                        </div>
+                    </div>
+                    <div class="main-content">
+                        <!-- 第一排：三个核心指标 -->
+                        <div class="core-metrics-row" id="coreMetricsRow">
+                            <div class="core-card"><div class="label">资产账户（实际放款）</div><div class="value" id="assetActualCore">0.00 万元</div></div>
+                            <div class="core-card"><div class="label">资产账户（含预估放款）</div><div class="value" id="assetEstCore">0.00 万元</div></div>
+                            <div class="core-card"><div class="label">可用额度</div><div class="value" id="availableCore">0.00 万元</div></div>
+                        </div>
+                        <!-- 第二排：三列详细指标 -->
+                        <div class="detail-metrics-row" id="detailMetricsRow">
+                            <div class="detail-col" id="colLeft">
+                                <h4>📋 付款 & 历史</h4>
+                                <div id="leftMetrics"></div>
+                            </div>
+                            <div class="detail-col" id="colMiddle">
+                                <h4>💰 资金调节 & 未回</h4>
+                                <div id="middleMetrics"></div>
+                            </div>
+                            <div class="detail-col" id="colRight">
+                                <h4>📊 其他指标</h4>
+                                <div id="rightMetrics"></div>
+                            </div>
+                        </div>
+                        <!-- 数据分析报告 -->
+                        <div class="analysis-card">
+                            <div class="analysis-title">📊 数据分析报告</div>
+                            <div class="analysis-content">
+                                <div class="analysis-text" id="analysisText">加载中...</div>
+                                <div class="analysis-chart"><div id="compareChart"></div></div>
+                            </div>
+                        </div>
+                        <!-- 手动调节卡片（完整盈余模块） -->
+                        <div class="adjust-card">
+                            <div style="font-size:16px; color:#b9e2ff;">✏️ 手动调节 · 账户盈余预测</div>
+                            <div class="adjust-row">
+                                <div class="adjust-item"><label>可前置回款(万元)</label><input type="number" id="preBack" step="0.01" placeholder="0"></div>
+                                <div class="adjust-item"><label>当月待付可延期(万元)</label><input type="number" id="delayPay" step="0.01" placeholder="0"></div>
+                                <div class="adjust-item"><label>我的费用总计(万元)</label><input type="number" id="myCost" step="0.01" placeholder="0"></div>
+                                <button class="btn-calc" onclick="calcSurplusExtra()">📈 计算</button>
+                            </div>
+                            <div class="surplus-group" id="surplusPanel"></div>
+                        </div>
+                        <!-- 每日付款明细 -->
+                        <div class="daily-card">
+                            <div class="daily-title">📆 4月每日已付款明细（万元）</div>
+                            <div class="daily-list">
+                                <div class="daily-list-title" style="margin-bottom:8px;">📋 每日付款金额列表</div>
+                                <div id="dailyNumbersList" class="daily-items"></div>
+                            </div>
+                        </div>
+                        <!-- 筛选栏和按钮 -->
+                        <div class="filter-bar">
+                            <div class="filter-item"><label>👤 销售</label><select id="filterSales"></select></div>
+                            <div class="filter-item"><label>🏢 客户</label><input type="text" id="filterCustomer" placeholder="输入客户名"></div>
+                            <button class="reset-btn" onclick="resetFilters()">重置筛选</button>
+                        </div>
+                        <div class="action-group">
+                            <button class="btn" id="overdueDetailBtn">⚠️ 逾期应收未收明细</button>
+                            <button class="btn" id="monthPayDetailBtn">📅 本月待付明细</button>
+                            <button class="btn btn-export" id="exportAllBtn">📎 导出全部明细(CSV)</button>
+                        </div>
+                        <div class="detail-wrapper">
+                            <div id="allDetailContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 支付看板面板（修复数据关联 + 日历） -->
+            <div id="tabPayDashboard" class="tab-pane">
+                <div class="pay-dashboard">
+                    <div class="pay-stats">
+                        <div class="pay-stat-card"><div class="label">今日带来资产</div><div id="todayAssetSum" class="value">0 万元</div></div>
+                        <div class="pay-stat-card"><div class="label">今日回款</div><div id="todayBackSum" class="value">0 万元</div></div>
+                        <div class="pay-stat-card"><div class="label">保证金</div><div id="todayDepositSum" class="value">0 万元</div></div>
+                    </div>
+                    <div class="three-columns">
+                        <div class="pay-section"><h4>📋 资产明细</h4><div id="assetDetailList" class="detail-list"></div></div>
+                        <div class="pay-section"><h4>💰 回款明细</h4><div id="backDetailList" class="detail-list"></div></div>
+                        <div class="pay-section"><h4>🔒 保证金明细</h4><div id="depositDetailList" class="detail-list"></div></div>
+                    </div>
+                    <div class="three-columns">
+                        <div class="pay-section"><h4>📋 今日要付款的公司</h4><div id="todayPayList" class="pay-list"></div><div style="margin-top:8px; text-align:right;">总计：<span id="totalPayAmount">0.00</span> 万元</div></div>
+                        <div class="pay-section"><h4>⏳ 今日付款后几天回款的公司</h4><div id="futurePayList" class="pay-list"></div></div>
+                        <div class="pay-section"><h4>🧮 验算工具</h4><div class="verification-left"><div>可用资金池总额：<strong id="totalAvailable">0</strong> 万元</div><div class="available-pool" id="availablePoolDisplay"></div><div><strong>待付款清单（勾选左侧项目后自动添加）</strong></div><div id="pendingList" class="pay-list" style="max-height:200px;"></div><div style="margin-top:12px; display:flex; gap:8px;"><button id="confirmPayBtn" class="btn">✅ 确认付款</button><button id="exportPaymentBtn" class="btn btn-export">📎 导出付款记录</button></div><div style="margin-top:8px; font-size:12px;">💡 提示：勾选左侧列表项目，自动添加到待付款清单</div></div></div>
+                    </div>
+                    <div class="calendar">
+                        <div class="calendar-header"><button id="prevMonthBtn">◀</button><span id="currentMonthYear"></span><button id="nextMonthBtn">▶</button></div>
+                        <div class="calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                        <div id="calendarGrid" class="calendar-grid"></div>
+                        <div style="margin-top:12px;"><div>3日内回款: <span id="sum3Days">0</span> 万元</div><div>5日内回款: <span id="sum5Days">0</span> 万元</div><div>7日内回款: <span id="sum7Days">0</span> 万元</div></div>
+                    </div>
+                    <div class="pay-section">
+                        <h4>🏦 资方应还款金额</h4>
+                        <div id="repayPlanList"></div>
+                        <div style="margin-top:12px;"><select id="repaySelect"></select><button id="repayBtn" class="btn">💰 用可用资金还款</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="commonModal" class="modal">
+    <div class="modal-panel">
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+        <h3 id="modalTitle" style="color:white;">明细</h3>
+        <div id="modalBodyArea"></div>
+        <div id="modalTotal" style="margin-top:12px; font-weight:bold; text-align:right; color:white;"></div>
+    </div>
+</div>
+
+<script>
+    // ======================= 模拟数据源（5条示例，用户可替换） =======================
+    const rawOrders = [
+{dept:"",team:"",customer:"青岛朝洋水产食品有限公司",sales:"马莉",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务一部",team:"一部二组",customer:"山东省林凯工艺品有限公司",sales:"张凯",assetApr:0,assetEstApr:0.509401,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"",team:"",customer:"上海哺赖克贸易有限公司",sales:"陈嘉遇",assetApr:0,assetEstApr:310.707862,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务一部",team:"一部二组",customer:"临沂方华钢铁贸易有限公司",sales:"张珈诺",assetApr:3.995196,assetEstApr:7.620942125,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部四组",customer:"青岛泰信冷链有限公司",sales:"刘璐",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部四组",customer:"青岛众联输送工程有限公司",sales:"刘璐",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务三部-王欣宇",team:"三部七组",customer:"青岛欧普瑞新材料有限公司",sales:"刘歆媛",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:"",pay0402:"",pay0403:"",pay0407:"",pay0408:"",pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部四组",customer:"山东隆程控股集团有限公司",sales:"孙庆峰",assetApr:0,assetEstApr:51.214303125,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0},{dept:"启航部",team:"启航组",customer:"山东达信科技有限公司",sales:"曾潇",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0},{dept:"启航部",team:"启航组",customer:"山东瑞达钢铁有限公司",sales:"宋丽娜",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部一组",customer:"山东金必达生物技术有限公司",sales:"王雅娟",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部四组",customer:"邢台晶派贸易有限公司",sales:"田密",assetApr:0,assetEstApr:0,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0},{dept:"业务二部",team:"二部四组",customer:"山东南欧汽车贸易有限公司",sales:"苑馨艺",assetApr:0,assetEstApr:6.43676807,paidUnback:0,guaranteeIn:0,quickBackIn:0,guaranteeOut:0,quickBackOut:0,borrowOut:0,borrowIn:0,dueBack:0,backReceived:0,hisPayable:0,hisPaid:0,hisUnpaid:0,monthPayable:0,monthPaid:0,monthUnpaid:0,pay0401:0,pay0402:0,pay0403:0,pay0407:0,pay0408:0,pay0409:0,pay0410:0,pay0413:0}
+    ];
+
+    const pwdMap = {
+        "王欣宇":"224","李永博":"787","张芮崎":"197","姚国平":"478","张凯":"432","张质斌":"476","周平平":"361","迟凯琳":"978","贾佳":"183","张珈诺":"357","苟萌迪":"329","唐东方":"165","周莉娟":"519","初东阳":"538","王昌森":"362","赵帆":"963","王晓燕":"372","孙硕":"647","杨骁琪":"611","张万青":"585","赵姝艳":"536","鞠宜晓":"895","孙庆峰":"481","刘歆媛":"913","唐欣雨":"716","吴双":"954","韩博文":"361","田密":"462","徐同乐":"834","张昊":"587","李永明":"824","卞靖恺":"126","辛子琪":"374","王翰":"169","谢振勇":"985","李佳奇":"425","王云龙":"847","王森":"315","李梦园":"283","银小忠":"131","兰子航":"447","杨海胜":"716","赵敏":"565","刘洋洋":"863","宋丽娜":"948","唐瑞发":"811","李俊伟":"727","刘畅":"421","王文静":"858","王雅娟":"828","高大超":"553","邱兆霞":"236","曾潇":"153","王文慧":"159","孙铭悦":"147","王小丹":"392","业务三部-王欣宇":"951","业务三部-王昌森":"994","业务二部":"308","业务一部":"178","启航部":"337","三部一组":"994","三部二组":"323","三部三组":"340","三部四组":"154","三部五组":"421","三部六组":"342","三部七组":"333","二部一组":"412","二部二组":"349","二部三组":"153","二部四组":"666","一部二组":"999","启航组":"337","总览":"9999","admin":"admin888"
+    };
+
+    let currentUser = "", currentOrders = [], currentFilteredOrders = [], allDepartments = [], allTeams = [];
+    let currentDailyPayments = {}, currentMetrics = null, chartInstance = null;
+    let currentDeptFilter = "all", currentTeamFilter = "all", currentSalesFilter = "all", currentCustomerFilter = "";
+
+    // 支付看板数据
+    let paymentRecords = [];
+    let repayPlans = [];
+    let pendingItems = [];
+    let currentCalendarYear = 2026, currentCalendarMonth = 3;
+    const lenderNames = ["海尔", "海发", "天食", "在途"];
+    let nextId = 1000;
+
+    function initRepayPlans() {
+        if (repayPlans.length === 0) {
+            repayPlans.push({ id: nextId++, lender: "海尔", amount: 1000, dueDate: "2026-04-20" });
+            repayPlans.push({ id: nextId++, lender: "海发", amount: 1000, dueDate: "2026-04-25" });
+            repayPlans.push({ id: nextId++, lender: "天食", amount: 1000, dueDate: "2026-04-28" });
+            repayPlans.push({ id: nextId++, lender: "在途", amount: 1000, dueDate: "2026-04-30" });
+        }
+        saveMarketData();
+    }
+    function loadMarketData() {
+        const stored = localStorage.getItem('assetMarket');
+        if (stored) {
+            const data = JSON.parse(stored);
+            if (data.repayPlans) repayPlans = data.repayPlans;
+        }
+        if (repayPlans.length === 0) initRepayPlans();
+        saveMarketData();
+    }
+    function saveMarketData() {
+        localStorage.setItem('assetMarket', JSON.stringify({ repayPlans, nextId }));
+    }
+
+    // 计算指标（与支付看板共享）
+    function computeNewMetrics(orders, dailyMap) {
+        let assetApr = orders.reduce((s,o)=> s + (o.assetApr || 0), 0);
+        let assetEstApr = orders.reduce((s,o)=> s + (o.assetEstApr || 0), 0);
+        let paidUnback = orders.reduce((s,o)=> s + (o.paidUnback || 0), 0);
+        let guaranteeIn = orders.reduce((s,o)=> s + (o.guaranteeIn || 0), 0);
+        let quickBackIn = orders.reduce((s,o)=> s + (o.quickBackIn || 0), 0);
+        let guaranteeOut = orders.reduce((s,o)=> s + (o.guaranteeOut || 0), 0);
+        let quickBackOut = orders.reduce((s,o)=> s + (o.quickBackOut || 0), 0);
+        let borrowIn = orders.reduce((s,o)=> s + (o.borrowIn || 0), 0);
+        let borrowOut = orders.reduce((s,o)=> s + (o.borrowOut || 0), 0);
+        let dueBack = orders.reduce((s,o)=> s + (o.dueBack || 0), 0);
+        let backReceived = orders.reduce((s,o)=> s + (o.backReceived || 0), 0);
+        let hisPayable = orders.reduce((s,o)=> s + (o.hisPayable || 0), 0);
+        let hisPaid = orders.reduce((s,o)=> s + (o.hisPaid || 0), 0);
+        let hisUnpaid = hisPayable - hisPaid;
+        let monthPayable = orders.reduce((s,o)=> s + (o.monthPayable || 0), 0);
+        let monthPaid = orders.reduce((s,o)=> s + (o.monthPaid || 0), 0);
+        let monthUnpaid = monthPayable - monthPaid;
+        let assetAccount = assetApr - paidUnback + guaranteeIn + quickBackIn - guaranteeOut - quickBackOut + borrowIn - borrowOut;
+        let assetEst = assetAccount + assetEstApr;
+        let available = assetAccount * 0.85;
+        let totalPaidBeforeApril = Object.values(dailyMap).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+        return { assetApr, assetEstApr, paidUnback, guaranteeIn, quickBackIn, guaranteeOut, quickBackOut, borrowIn, borrowOut, dueBack, backReceived, hisPayable, hisPaid, hisUnpaid, monthPayable, monthPaid, monthUnpaid, assetAccount, assetEst, available, totalPaidBeforeApril };
+    }
+
+    function renderNewMetrics(metrics) {
+        document.getElementById("assetActualCore").innerHTML = metrics.assetAccount.toFixed(2) + " 万元";
+        document.getElementById("assetEstCore").innerHTML = metrics.assetEst.toFixed(2) + " 万元";
+        document.getElementById("availableCore").innerHTML = metrics.available.toFixed(2) + " 万元";
+        const leftHtml = `
+            <div class="metric-item"><span class="label">4月当月应付</span><span class="value">${metrics.monthPayable.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">4月当月已付</span><span class="value">${metrics.monthPaid.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">4月当月待付</span><span class="value negative-value">${metrics.monthUnpaid.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">1-3月历史累计应付</span><span class="value">${metrics.hisPayable.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">1-3月历史累计已付</span><span class="value">${metrics.hisPaid.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">1-3月历史累计待付</span><span class="value negative-value">${metrics.hisUnpaid.toFixed(2)} 万</span></div>
+        `;
+        document.getElementById("leftMetrics").innerHTML = leftHtml;
+        const middleHtml = `
+            <div class="metric-item"><span class="label">保障金入账金额</span><span class="value positive-value">${metrics.guaranteeIn.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">快速回款入账金额</span><span class="value positive-value">${metrics.quickBackIn.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">保障金退回金额</span><span class="value negative-value">${metrics.guaranteeOut.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">快速回款退回金额</span><span class="value negative-value">${metrics.quickBackOut.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">借入</span><span class="value positive-value">${metrics.borrowIn.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">借出</span><span class="value negative-value">${metrics.borrowOut.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">截至当日已付未回</span><span class="value negative-value">${metrics.paidUnback.toFixed(2)} 万</span></div>
+        `;
+        document.getElementById("middleMetrics").innerHTML = middleHtml;
+        const rightHtml = `
+            <div class="metric-item"><span class="label">4月已放款资产</span><span class="value">${metrics.assetApr.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">4月预估待放款资产</span><span class="value">${metrics.assetEstApr.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">截至当日已付应回</span><span class="value">${metrics.dueBack.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">截至当日已付已回</span><span class="value">${metrics.backReceived.toFixed(2)} 万</span></div>
+            <div class="metric-item"><span class="label">4月累计付款合计</span><span class="value">${metrics.totalPaidBeforeApril.toFixed(2)} 万</span></div>
+        `;
+        document.getElementById("rightMetrics").innerHTML = rightHtml;
+    }
+
+    function renderAnalysisReport(metrics) {
+        const assetAccount = metrics.assetAccount;
+        const monthUnpaid = metrics.monthUnpaid;
+        const hisUnpaid = metrics.hisUnpaid;
+        const assetApr = metrics.assetApr;
+        const totalPaid = metrics.totalPaidBeforeApril;
+        let riskLevel = "低";
+        if (assetAccount < -2000) riskLevel = "高";
+        else if (assetAccount < 0) riskLevel = "中";
+        let suggestion = "";
+        if (assetAccount < 0) {
+            suggestion = "资产账户为负，建议优先处理逾期款项，加快回款，并控制当月付款节奏。";
+        } else if (monthUnpaid > assetAccount) {
+            suggestion = "当月待付超过资产账户，存在支付缺口，需通过前置回款或延期待付来弥合。";
+        } else {
+            suggestion = "资产账户充裕，可适度加速放款或偿还历史欠款。";
+        }
+        const analysisText = `<strong>📈 核心数据解读</strong><br>• 4月已放款资产：${assetApr.toFixed(2)} 万元<br>• 资产账户（实际可用）：${assetAccount.toFixed(2)} 万元<br>• 当月待付总额：${monthUnpaid.toFixed(2)} 万元<br>• 历史累计待付：${hisUnpaid.toFixed(2)} 万元<br>• 4月累计付款（含3月之前代付）：${totalPaid.toFixed(2)} 万元<br><br><strong>⚠️ 风险评估</strong><br>• 当前资金风险等级：${riskLevel}<br>• ${suggestion}<br><br><strong>🎯 目标完成进度</strong><br>• 当月打平缺口：${assetAccount >= 0 ? 0 : (-assetAccount).toFixed(2)} 万元<br>• 历史打平缺口：${hisUnpaid.toFixed(2)} 万元<br>• 若含预估资产，资金压力将有所缓解。`;
+        document.getElementById("analysisText").innerHTML = analysisText;
+        if (chartInstance) chartInstance.dispose();
+        chartInstance = echarts.init(document.getElementById("compareChart"));
+        chartInstance.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['4月当月', '1-3月累计'], textStyle: { color: '#e0e0e0' } },
+            xAxis: { type: 'category', data: ['应付总额', '待付总额', '已付总额'], axisLabel: { color: '#ccc' } },
+            yAxis: { type: 'value', name: '万元', nameTextStyle: { color: '#ccc' }, axisLabel: { color: '#ccc' } },
+            series: [
+                { name: '4月当月', type: 'bar', data: [metrics.monthPayable, metrics.monthUnpaid, metrics.monthPaid], itemStyle: { color: '#ffaa44' } },
+                { name: '1-3月累计', type: 'bar', data: [metrics.hisPayable, metrics.hisUnpaid, metrics.hisPaid], itemStyle: { color: '#3b82f6' } }
+            ],
+            backgroundColor: 'transparent',
+            grid: { containLabel: true }
+        });
+    }
+
+    function buildDailyPaymentsFromOrders(orders) {
+        const daysMap = {};
+        for (let row of orders) {
+            for (let key in row) {
+                if (key.startsWith('pay04')) {
+                    let dayNum = parseInt(key.slice(5));
+                    let day = `4月${dayNum}日`;
+                    let val = parseFloat(row[key]) || 0;
+                    daysMap[day] = (daysMap[day] || 0) + val;
+                }
+            }
+        }
+        return daysMap;
+    }
+
+    function renderDailyNumbersList() {
+        const container = document.getElementById("dailyNumbersList");
+        const sortedKeys = Object.keys(currentDailyPayments).sort((a,b)=> parseInt(a.replace(/\D/g,''))-parseInt(b.replace(/\D/g,'')));
+        let html = '';
+        sortedKeys.forEach(day => { let val = currentDailyPayments[day]; html += `<div class="daily-badge"><span>${day}</span> <span>${val.toFixed(2)} 万元</span></div>`; });
+        container.innerHTML = html;
+    }
+
+    function renderDetailTable(orders) {
+        const container = document.getElementById("allDetailContainer");
+        if(!orders.length){ container.innerHTML = "<div class='no-data'>暂无明细数据</div>"; return; }
+        let headers = ["销售","部门","小组","客户","4月已放款","预估待放款","已付未回","保障金入账","快速回款入账","保障金退回","快速回款退回","借出","借入","应回款","已回款","历史应付","历史已付","历史待付","当月应付","当月已付","当月待付","资产账户"];
+        let html = `<table class="detail-table"><thead><tr>`;
+        headers.forEach(h => html += `<th>${h}</th>`);
+        html += `</thead><tbody>`;
+        orders.forEach(o => {
+            let assetAccount = (o.assetApr||0) - (o.paidUnback||0) + (o.guaranteeIn||0) + (o.quickBackIn||0) - (o.guaranteeOut||0) - (o.quickBackOut||0) + (o.borrowIn||0) - (o.borrowOut||0);
+            let hisUn = (o.hisPayable||0)-(o.hisPaid||0);
+            let monthUn = (o.monthPayable||0)-(o.monthPaid||0);
+            html += `<tr>
+                <td>${o.sales}</td>
+                <td>${o.dept}</td>
+                <td>${o.team}</td>
+                <td>${o.customer}</td>
+                <td>${(o.assetApr||0).toFixed(2)}</td>
+                <td>${(o.assetEstApr||0).toFixed(2)}</td>
+                <td>${(o.paidUnback||0).toFixed(2)}</td>
+                <td>${(o.guaranteeIn||0).toFixed(2)}</td>
+                <td>${(o.quickBackIn||0).toFixed(2)}</td>
+                <td>${(o.guaranteeOut||0).toFixed(2)}</td>
+                <td>${(o.quickBackOut||0).toFixed(2)}</td>
+                <td>${(o.borrowOut||0).toFixed(2)}</td>
+                <td>${(o.borrowIn||0).toFixed(2)}</td>
+                <td>${(o.dueBack||0).toFixed(2)}</td>
+                <td>${(o.backReceived||0).toFixed(2)}</td>
+                <td>${(o.hisPayable||0).toFixed(2)}</td>
+                <td>${(o.hisPaid||0).toFixed(2)}</td>
+                <td>${hisUn.toFixed(2)}</td>
+                <td>${(o.monthPayable||0).toFixed(2)}</td>
+                <td>${(o.monthPaid||0).toFixed(2)}</td>
+                <td>${monthUn.toFixed(2)}</td>
+                <td>${assetAccount.toFixed(2)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    function applyFilters() { let filtered=[...currentOrders]; if(currentDeptFilter!=="all") filtered=filtered.filter(o=>o.dept===currentDeptFilter); if(currentTeamFilter!=="all") filtered=filtered.filter(o=>o.team===currentTeamFilter); if(currentSalesFilter!=="all") filtered=filtered.filter(o=>o.sales===currentSalesFilter); if(currentCustomerFilter) filtered=filtered.filter(o=>o.customer.toLowerCase().includes(currentCustomerFilter.toLowerCase())); currentFilteredOrders=filtered; currentDailyPayments=buildDailyPaymentsFromOrders(currentFilteredOrders); const metrics=computeNewMetrics(currentFilteredOrders, currentDailyPayments); renderNewMetrics(metrics); renderAnalysisReport(metrics); renderDailyNumbersList(); renderDetailTable(currentFilteredOrders); document.getElementById("surplusPanel").innerHTML=`<div class="surplus-block"><h4>📌 账户盈余结果</h4><div style="padding:12px;text-align:center;color:#aaa;">点击“计算盈余”查看结果</div></div><div class="surplus-block"><h4>🎯 目标完成进度</h4><div style="padding:12px;text-align:center;color:#aaa;">点击“计算盈余”查看结果</div></div>`; }
+    function resetFilters() { currentDeptFilter="all"; currentTeamFilter="all"; currentSalesFilter="all"; currentCustomerFilter=""; document.getElementById("sliceDept").value="all"; document.getElementById("sliceTeam").value="all"; document.getElementById("filterSales").value="all"; document.getElementById("filterCustomer").value=""; applyFilters(); document.querySelectorAll('#memberList .member-item').forEach(el=>el.classList.remove('active')); const allItem=Array.from(document.querySelectorAll('#memberList .member-item')).find(el=>el.innerText.includes('全部成员')); if(allItem) allItem.classList.add('active'); }
+    function renderSlicerOptions() { const deptSet=new Set(), teamSet=new Set(); currentOrders.forEach(o=>{ deptSet.add(o.dept); teamSet.add(o.team); }); allDepartments=Array.from(deptSet).sort(); allTeams=Array.from(teamSet).sort(); const deptSelect=document.getElementById("sliceDept"); deptSelect.innerHTML='<option value="all">全部部门</option>'; allDepartments.forEach(d=>{const opt=document.createElement('option'); opt.value=d; opt.text=d; deptSelect.appendChild(opt);}); const teamSelect=document.getElementById("sliceTeam"); teamSelect.innerHTML='<option value="all">全部小组</option>'; allTeams.forEach(t=>{const opt=document.createElement('option'); opt.value=t; opt.text=t; teamSelect.appendChild(opt);}); deptSelect.onchange=(e)=>{currentDeptFilter=e.target.value; applyFilters();}; teamSelect.onchange=(e)=>{currentTeamFilter=e.target.value; applyFilters();}; }
+    function renderMemberListForSlice() { let filtered=[...currentOrders]; if(currentDeptFilter!=="all") filtered=filtered.filter(o=>o.dept===currentDeptFilter); if(currentTeamFilter!=="all") filtered=filtered.filter(o=>o.team===currentTeamFilter); const members=[...new Set(filtered.map(o=>o.sales))].sort(); const container=document.getElementById("memberList"); container.innerHTML=''; const allDiv=document.createElement('div'); allDiv.className='member-item'; if(currentSalesFilter==="all") allDiv.classList.add('active'); allDiv.innerHTML=`<span>👥 全部成员</span><span class="badge">全组</span>`; allDiv.onclick=()=>{currentSalesFilter="all"; applyFilters(); document.querySelectorAll('#memberList .member-item').forEach(el=>el.classList.remove('active')); allDiv.classList.add('active');}; container.appendChild(allDiv); members.forEach(member=>{ const div=document.createElement('div'); div.className='member-item'; if(currentSalesFilter===member) div.classList.add('active'); div.innerHTML=`<span>👤 ${member}</span><span class="badge">个人</span>`; div.onclick=()=>{currentSalesFilter=member; applyFilters(); document.querySelectorAll('#memberList .member-item').forEach(el=>el.classList.remove('active')); div.classList.add('active');}; container.appendChild(div);}); }
+    function getRecentPayDate() { let maxDay=0; for(let i=1;i<=31;i++){ let key=`pay04${i.toString().padStart(2,'0')}`; if(rawOrders.some(o=>o[key]&&o[key]>0)) maxDay=i; } return maxDay; }
+    function renderAssetRank() { const assetMap=new Map(); rawOrders.forEach(o=>assetMap.set(o.sales,(assetMap.get(o.sales)||0)+o.assetApr)); const rank=Array.from(assetMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5); let html=''; rank.forEach(([name,val])=>{html+=`<div class="rank-item" onclick="showSalesDetail('${name}','asset')"><span>${name}</span><span class="rank-value">${val.toFixed(2)} 万元</span></div>`;}); document.getElementById("topAssetRank").innerHTML=rank.length?html:'<div class="rank-item">暂无数据</div>'; }
+    function renderPayRank() { const payMap=new Map(); rawOrders.forEach(o=>{const unpaid=(o.monthPayable||0)-(o.monthPaid||0); payMap.set(o.sales,(payMap.get(o.sales)||0)+unpaid);}); const rank=Array.from(payMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5); let html=''; rank.forEach(([name,val])=>{html+=`<div class="rank-item" onclick="showSalesDetail('${name}','pay')"><span>${name}</span><span class="rank-value">${val.toFixed(2)} 万元</span></div>`;}); document.getElementById("topPayRank").innerHTML=rank.length?html:'<div class="rank-item">暂无数据</div>'; }
+    function renderTodayPayRank() { const targetDay=getRecentPayDate(); if(targetDay===0){ document.getElementById("topTodayPayRank").innerHTML='<div class="rank-item">暂无今日付款数据</div>'; return; } const payKey=`pay04${targetDay.toString().padStart(2,'0')}`; const detailMap=new Map(); rawOrders.forEach(o=>{const amount=o[payKey]||0; if(amount>0){const key=`${o.sales}|${o.customer}`; detailMap.set(key,{sales:o.sales,customer:o.customer,amount});}}); const list=Array.from(detailMap.values()).sort((a,b)=>b.amount-a.amount).slice(0,5); let html=''; list.forEach(item=>{html+=`<div class="rank-item" onclick="showSalesDetail('${item.sales}','todayPay','${item.customer}')"><span>${item.sales} → ${item.customer}</span><span class="rank-value">${item.amount.toFixed(2)} 万元</span></div>`;}); document.getElementById("topTodayPayRank").innerHTML=list.length?html:'<div class="rank-item">暂无今日付款数据</div>'; }
+    function renderBackRank() { const backMap=new Map(); rawOrders.forEach(o=>backMap.set(o.sales,(backMap.get(o.sales)||0)+(o.backReceived||0))); const rank=Array.from(backMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5); let html=''; rank.forEach(([name,val])=>{html+=`<div class="rank-item" onclick="showSalesDetail('${name}','back')"><span>${name}</span><span class="rank-value">${val.toFixed(2)} 万元</span></div>`;}); document.getElementById("topBackRank").innerHTML=rank.length?html:'<div class="rank-item">暂无回款数据</div>'; }
+    function renderDepositRank() { const depositMap=new Map(); rawOrders.forEach(o=>depositMap.set(o.sales,(depositMap.get(o.sales)||0)+(o.notOnTime||0))); const rank=Array.from(depositMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5); let html=''; rank.forEach(([name,val])=>{html+=`<div class="rank-item" onclick="showSalesDetail('${name}','deposit')"><span>${name}</span><span class="rank-value">${val.toFixed(2)} 万元</span></div>`;}); document.getElementById("topDepositRank").innerHTML=rank.length?html:'<div class="rank-item">暂无保证金数据</div>'; }
+    function showSalesDetail(salesName,type,customerName='') { let title='',body='',total=0; const orders=rawOrders.filter(o=>o.sales===salesName); if(type==='asset'){ title=`${salesName} - 资产明细`; body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>4月已放款资产(万元)</th></tr></thead><tbody>`; orders.forEach(o=>{body+=`<tr><td>${o.customer}</td><td>${o.assetApr.toFixed(2)}</td><tr>`; total+=o.assetApr;}); body+=`</tbody></table>`; document.getElementById("modalTotal").innerHTML=`合计资产: ${total.toFixed(2)} 万元`; } else if(type==='pay'){ title=`${salesName} - 代付明细（当月待付）`; body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>当月待付金额(万元)</th><tr></thead><tbody>`; orders.forEach(o=>{const unpaid=(o.monthPayable||0)-(o.monthPaid||0); body+=`<tr><td>${o.customer}</td><td>${unpaid.toFixed(2)}</td></tr>`; total+=unpaid;}); body+=`</tbody></table>`; document.getElementById("modalTotal").innerHTML=`合计待付: ${total.toFixed(2)} 万元`; } else if(type==='todayPay'){ const targetDay=getRecentPayDate(); const payKey=`pay04${targetDay.toString().padStart(2,'0')}`; title=`${salesName} - 今日付款明细（4月${targetDay}日）`; if(customerName){ const order=orders.find(o=>o.customer===customerName); const amount=order?(order[payKey]||0):0; body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>付款金额(万元)</th></tr></thead><tbody><tr><td>${customerName}</td><td>${amount.toFixed(2)}</td></tr></tbody></tr>`; total=amount; } else { body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>付款金额(万元)</th></td></thead><tbody>`; orders.forEach(o=>{const amount=o[payKey]||0; if(amount>0){body+=`<tr><td>${o.customer}</td><td>${amount.toFixed(2)}</td></tr>`; total+=amount;}}); body+=`</tbody><tr>`; } document.getElementById("modalTotal").innerHTML=`合计付款: ${total.toFixed(2)} 万元`; } else if(type==='back'){ title=`${salesName} - 回款明细`; body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>已回款金额(万元)</th></td></thead><tbody>`; orders.forEach(o=>{body+=`<tr><td>${o.customer}</td><td>${(o.backReceived||0).toFixed(2)}</td><tr>`; total+=(o.backReceived||0);}); body+=`</tbody><tr>`; document.getElementById("modalTotal").innerHTML=`合计回款: ${total.toFixed(2)} 万元`; } else if(type==='deposit'){ title=`${salesName} - 保证金明细（未按约定回款）`; body=`<table class="modal-table"><thead><tr><th>客户名称</th><th>未按约定回款(万元)</th></td></thead><tbody>`; orders.forEach(o=>{body+=`<tr><td>${o.customer}</td><td>${(o.notOnTime||0).toFixed(2)}</td></tr>`; total+=(o.notOnTime||0);}); body+=`</tbody></table>`; document.getElementById("modalTotal").innerHTML=`合计保证金: ${total.toFixed(2)} 万元`; } document.getElementById("modalBodyArea").innerHTML=body; document.getElementById("modalTitle").innerText=title; document.getElementById("commonModal").style.display="flex"; }
+    function renderAllRanks() { renderAssetRank(); renderPayRank(); renderTodayPayRank(); renderBackRank(); renderDepositRank(); }
+    function showOverdue() { let overdueList=currentFilteredOrders.filter(o=>(o.paidUnback||0)>0.01); let body=`<table class="modal-table"><thead><tr><th>企业名称</th><th>逾期未回款(万元)</th></td></thead><tbody>`; let total=0; overdueList.forEach(o=>{total+=o.paidUnback; body+=`<tr><td>${o.customer}</td><td>${o.paidUnback.toFixed(2)}</td></tr>`;}); if(overdueList.length===0) body+=`<tr><td colspan="2">暂无逾期应收未收记录<tr>`; body+=`</tbody></table>`; document.getElementById("modalBodyArea").innerHTML=body; document.getElementById("modalTotal").innerHTML=`合计逾期未收金额: ${total.toFixed(2)} 万元 | 涉及企业 ${overdueList.length} 家`; document.getElementById("modalTitle").innerText="⚠️ 逾期应收未收明细"; document.getElementById("commonModal").style.display="flex"; }
+    function showMonthPay() { let filter=currentFilteredOrders.map(o=>({customer:o.customer,amount:(o.monthPayable||0)-(o.monthPaid||0)})).filter(i=>i.amount>0.01); let body=`<table class="modal-table"><thead><tr><th>企业名称</th><th>本月待付金额(万元)</th><tr></thead><tbody>`; let total=0; filter.forEach(i=>{total+=i.amount; body+=`<tr><td>${i.customer}</td><td>${i.amount.toFixed(2)}</td></tr>`;}); if(filter.length===0) body+=`<tr><td colspan="2">本月无待付记录</td></tr>`; body+=`</tbody><tr>`; document.getElementById("modalBodyArea").innerHTML=body; document.getElementById("modalTotal").innerHTML=`合计待付金额: ${total.toFixed(2)} 万元 | 涉及企业 ${filter.length} 家`; document.getElementById("modalTitle").innerText="📅 本月待付明细"; document.getElementById("commonModal").style.display="flex"; }
+    function exportFullData() { if(!currentFilteredOrders.length) return alert("无数据"); let metrics=computeNewMetrics(currentFilteredOrders, currentDailyPayments); let rows=[]; rows.push(["=== 核心指标汇总 ==="]); rows.push(["指标名称","数值(万元)"]); const metricLabels=["4月已放款资产","4月预估待放款资产","截至当日已付未回","保障金入账","快速回款入账","保障金退回","快速回款退回","借出","借入","应回款","已回款","1-3月历史应付","1-3月历史已付","1-3月历史待付","4月当月应付","4月当月已付","4月当月待付","资产账户","资产账户含预估","可用额度","4月累计付款合计"]; const metricVals=[metrics.assetApr,metrics.assetEstApr,metrics.paidUnback,metrics.guaranteeIn,metrics.quickBackIn,metrics.guaranteeOut,metrics.quickBackOut,metrics.borrowOut,metrics.borrowIn,metrics.dueBack,metrics.backReceived,metrics.hisPayable,metrics.hisPaid,metrics.hisUnpaid,metrics.monthPayable,metrics.monthPaid,metrics.monthUnpaid,metrics.assetAccount,metrics.assetEst,metrics.available,metrics.totalPaidBeforeApril]; for(let i=0;i<metricLabels.length;i++) rows.push([metricLabels[i],metricVals[i].toFixed(2)]); rows.push(["=== 4月每日已付款明细 ==="]); rows.push(["日期","金额(万元)"]); const sortedDays=Object.keys(currentDailyPayments).sort((a,b)=>parseInt(a.replace(/\D/g,''))-parseInt(b.replace(/\D/g,''))); for(let day of sortedDays) rows.push([day,currentDailyPayments[day].toFixed(2)]); rows.push(["=== 订单级明细 ==="]); let detailHeaders=["销售","部门","小组","客户","4月已放款","预估待放款","已付未回","保障金入账","快速回款入账","保障金退回","快速回款退回","借出","借入","应回款","已回款","历史应付","历史已付","历史待付","当月应付","当月已付","当月待付","资产账户"]; rows.push(detailHeaders); currentFilteredOrders.forEach(o=>{let assetAccount = (o.assetApr||0) - (o.paidUnback||0) + (o.guaranteeIn||0) + (o.quickBackIn||0) - (o.guaranteeOut||0) - (o.quickBackOut||0) + (o.borrowIn||0) - (o.borrowOut||0); rows.push([o.sales,o.dept,o.team,o.customer,(o.assetApr||0).toFixed(2),(o.assetEstApr||0).toFixed(2),(o.paidUnback||0).toFixed(2),(o.guaranteeIn||0).toFixed(2),(o.quickBackIn||0).toFixed(2),(o.guaranteeOut||0).toFixed(2),(o.quickBackOut||0).toFixed(2),(o.borrowOut||0).toFixed(2),(o.borrowIn||0).toFixed(2),(o.dueBack||0).toFixed(2),(o.backReceived||0).toFixed(2),(o.hisPayable||0).toFixed(2),(o.hisPaid||0).toFixed(2),((o.hisPayable||0)-(o.hisPaid||0)).toFixed(2),(o.monthPayable||0).toFixed(2),(o.monthPaid||0).toFixed(2),((o.monthPayable||0)-(o.monthPaid||0)).toFixed(2),assetAccount.toFixed(2)]);}); let csvContent=rows.map(row=>row.map(cell=>`"${cell}"`).join(",")).join("\n"); let blob=new Blob(["\uFEFF"+csvContent],{type:"text/csv;charset=utf-8"}); let link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`北极星_${currentUser}_完整数据.csv`; link.click(); URL.revokeObjectURL(link); }
+    // 完整的盈余计算函数
+    function calcSurplusExtra() {
+        if(!currentMetrics) return;
+        let m = currentMetrics;
+        let pre = parseFloat(document.getElementById("preBack").value) || 0;
+        let delay = parseFloat(document.getElementById("delayPay").value) || 0;
+        let cost = parseFloat(document.getElementById("myCost").value) || 0;
+
+        let realSurplusMonth = m.assetAccount - m.monthPayable - cost + pre - delay;
+        let estSurplusMonth = m.assetEst - m.monthPayable - cost + pre - delay;
+        let gapMonthReal = realSurplusMonth >= 0 ? 0 : -realSurplusMonth;
+        let gapMonthEst = estSurplusMonth >= 0 ? 0 : -estSurplusMonth;
+
+        let realSurplusHistory = - m.hisUnpaid;
+        let estSurplusHistory = (m.assetEst - m.assetAccount) - m.hisUnpaid;
+        let gapHistoryReal = realSurplusHistory >= 0 ? 0 : -realSurplusHistory;
+        let gapHistoryEst = estSurplusHistory >= 0 ? 0 : -estSurplusHistory;
+
+        let targetMonthNeed = gapMonthReal;
+        let targetMonthRate = (m.assetEstApr > 0 && targetMonthNeed > 0) ? Math.min(100, (m.assetEstApr / targetMonthNeed) * 100) : 0;
+        let targetHistoryNeed = gapHistoryReal;
+        let targetHistoryRate = (m.assetEstApr > 0 && targetHistoryNeed > 0) ? Math.min(100, (m.assetEstApr / targetHistoryNeed) * 100) : 0;
+
+        const panel = document.getElementById("surplusPanel");
+        panel.innerHTML = `
+            <div class="surplus-block">
+                <h4>📌 账户盈余结果</h4>
+                <div class="surplus-item"><span>当月盈余(实际)</span><strong class="${realSurplusMonth<0?'negative':'positive'}">${realSurplusMonth.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>距离当月打平(实际)需</span><strong>${gapMonthReal.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>当月盈余(含预估)</span><strong class="${estSurplusMonth<0?'negative':'positive'}">${estSurplusMonth.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>距离当月打平(含预估)需</span><strong>${gapMonthEst.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>历史盈余(实际)</span><strong class="${realSurplusHistory<0?'negative':'positive'}">${realSurplusHistory.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>距离历史打平(实际)需</span><strong>${gapHistoryReal.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>历史盈余(含预估)</span><strong class="${estSurplusHistory<0?'negative':'positive'}">${estSurplusHistory.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>距离历史打平(含预估)需</span><strong>${gapHistoryEst.toFixed(2)} 万元</strong></div>
+            </div>
+            <div class="surplus-block">
+                <h4>🎯 目标完成进度</h4>
+                <div class="surplus-item"><span>底线目标：当月打正 - 距离完成还差</span><strong>${targetMonthNeed.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>预估资产完成进度</span><strong>${targetMonthRate.toFixed(2)}%</strong></div>
+                <div class="surplus-item"><span>挑战目标：历史打正 - 距离完成还差</span><strong>${targetHistoryNeed.toFixed(2)} 万元</strong></div>
+                <div class="surplus-item"><span>预估资产完成进度</span><strong>${targetHistoryRate.toFixed(2)}%</strong></div>
+            </div>
+        `;
+    }
+
+    // ========== 支付看板渲染（修复数据关联 + 日历联动） ==========
+    function renderPayDashboard() {
+        if (!document.getElementById("todayAssetSum")) return;
+        // 使用当前筛选后的订单计算
+        const metrics = computeNewMetrics(currentFilteredOrders, currentDailyPayments);
+        // 今日带来资产 = 资产账户（实际放款）
+        document.getElementById("todayAssetSum").innerText = metrics.assetAccount.toFixed(2) + " 万元";
+        // 今日回款 = 截至当日已付已回
+        document.getElementById("todayBackSum").innerText = metrics.backReceived.toFixed(2) + " 万元";
+        // 保证金 = 保障金入账金额
+        document.getElementById("todayDepositSum").innerText = metrics.guaranteeIn.toFixed(2) + " 万元";
+
+        // 资产明细、回款明细、保证金明细（按销售汇总）
+        let assetDetailMap = new Map(), backDetailMap = new Map(), depositDetailMap = new Map();
+        currentFilteredOrders.forEach(o => {
+            assetDetailMap.set(o.sales, (assetDetailMap.get(o.sales) || 0) + o.assetApr);
+            backDetailMap.set(o.sales, (backDetailMap.get(o.sales) || 0) + o.backReceived);
+            depositDetailMap.set(o.sales, (depositDetailMap.get(o.sales) || 0) + o.guaranteeIn);
+        });
+        document.getElementById("assetDetailList").innerHTML = Array.from(assetDetailMap.entries()).map(([k,v]) => `<div class="detail-item"><span>${k}</span><span>${v.toFixed(2)}万</span></div>`).join('') || "<div>无</div>";
+        document.getElementById("backDetailList").innerHTML = Array.from(backDetailMap.entries()).filter(([_,v])=>v>0).map(([k,v]) => `<div class="detail-item"><span>${k}</span><span>${v.toFixed(2)}万</span></div>`).join('') || "<div>无</div>";
+        document.getElementById("depositDetailList").innerHTML = Array.from(depositDetailMap.entries()).filter(([_,v])=>v>0).map(([k,v]) => `<div class="detail-item"><span>${k}</span><span>${v.toFixed(2)}万</span></div>`).join('') || "<div>无</div>";
+
+        // 今日要付款的公司（当月待付 > 0）
+        let payItems = [];
+        let totalPay = 0;
+        currentFilteredOrders.forEach(o => {
+            let unpaid = (o.monthPayable||0) - (o.monthPaid||0);
+            if (unpaid > 0) {
+                payItems.push({ customer: o.customer, sales: o.sales, amount: unpaid });
+                totalPay += unpaid;
+            }
+        });
+        document.getElementById("totalPayAmount").innerText = totalPay.toFixed(2);
+        let todayPayHtml = "";
+        payItems.forEach(item => {
+            todayPayHtml += `<div class="pay-item" data-customer="${item.customer}" data-sales="${item.sales}" data-amount="${item.amount}" data-days="0" data-type="pay">
+                                <input type="checkbox" class="pay-checkbox" data-customer="${item.customer}" data-sales="${item.sales}" data-amount="${item.amount}" data-days="0" data-type="pay">
+                                <span>${item.customer} (${item.sales}) 应付 ${item.amount.toFixed(2)}万</span>
+                            </div>`;
+        });
+        document.getElementById("todayPayList").innerHTML = todayPayHtml || "<div>暂无待付公司</div>";
+
+        // 今日付款后几天回款的公司（dueBack > 0 且未完全回款）
+        let futureItems = [];
+        currentFilteredOrders.forEach(o => {
+            let due = o.dueBack || 0;
+            if (due > 0 && (o.backReceived||0) < due) {
+                let days = 3; // 模拟3天后回款
+                futureItems.push({ customer: o.customer, sales: o.sales, amount: due, days: days });
+            }
+        });
+        let futureHtml = "";
+        futureItems.forEach(item => {
+            futureHtml += `<div class="pay-item" data-customer="${item.customer}" data-sales="${item.sales}" data-amount="${item.amount}" data-days="${item.days}" data-type="future">
+                                <input type="checkbox" class="future-checkbox" data-customer="${item.customer}" data-sales="${item.sales}" data-amount="${item.amount}" data-days="${item.days}" data-type="future">
+                                <span>${item.customer} (${item.sales}) ${item.days}天后回款 ${item.amount.toFixed(2)}万</span>
+                            </div>`;
+        });
+        document.getElementById("futurePayList").innerHTML = futureHtml || "<div>暂无数据</div>";
+
+        // 绑定复选框事件
+        document.querySelectorAll('.pay-checkbox, .future-checkbox').forEach(cb => {
+            cb.removeEventListener('change', checkboxChangeHandler);
+            cb.addEventListener('change', checkboxChangeHandler);
+        });
+
+        // 可用资金池总额（资产+回款+保证金）
+        const totalAvailable = metrics.assetAccount + metrics.backReceived + metrics.guaranteeIn;
+        document.getElementById("totalAvailable").innerText = totalAvailable.toFixed(2);
+        document.getElementById("availablePoolDisplay").innerHTML = `💰 可用余额：${totalAvailable.toFixed(2)} 万元`;
+        renderPendingList();
+
+        // 渲染日历
+        renderUnifiedCalendar();
+    }
+
+    // 复选框处理：添加到待付款清单或移除
+    function checkboxChangeHandler(e) {
+        const cb = e.target;
+        const customer = cb.dataset.customer;
+        const sales = cb.dataset.sales;
+        const amount = parseFloat(cb.dataset.amount);
+        const days = parseInt(cb.dataset.days);
+        const type = cb.dataset.type;
+        if (cb.checked) {
+            if (!pendingItems.some(item => item.customer === customer && item.sales === sales && item.amount === amount)) {
+                pendingItems.push({ customer, sales, amount, days, type });
+                renderPendingList();
+            }
+        } else {
+            const idx = pendingItems.findIndex(item => item.customer === customer && item.sales === sales && item.amount === amount);
+            if (idx !== -1) pendingItems.splice(idx, 1);
+            renderPendingList();
+        }
+    }
+
+    function renderPendingList() {
+        const container = document.getElementById("pendingList");
+        if (!container) return;
+        let html = "";
+        pendingItems.forEach((item, idx) => {
+            html += `<div class="pending-item" data-idx="${idx}">
+                        <span>${item.customer} (${item.sales}) - ${item.amount.toFixed(2)}万 ${item.type === 'future' ? `(${item.days}天后回款)` : ''}</span>
+                        <button class="btn-danger" onclick="removePendingItem(${idx})">移除</button>
+                    </div>`;
+        });
+        container.innerHTML = html || "<div>暂无待付款项，请勾选左侧项目</div>";
+    }
+
+    function removePendingItem(idx) {
+        pendingItems.splice(idx, 1);
+        renderPendingList();
+        // 取消对应复选框
+        document.querySelectorAll('.pay-checkbox, .future-checkbox').forEach(cb => {
+            const customer = cb.dataset.customer;
+            const sales = cb.dataset.sales;
+            const amount = parseFloat(cb.dataset.amount);
+            if (pendingItems.every(item => !(item.customer === customer && item.sales === sales && item.amount === amount))) {
+                cb.checked = false;
+            }
+        });
+    }
+
+    function confirmPayment() {
+        if (pendingItems.length === 0) { alert("没有待付款项"); return; }
+        const totalAvailable = parseFloat(document.getElementById("totalAvailable").innerText);
+        const totalPending = pendingItems.reduce((sum, item) => sum + item.amount, 0);
+        if (totalPending > totalAvailable) {
+            alert(`可用资金不足！需要 ${totalPending.toFixed(2)} 万元，可用 ${totalAvailable.toFixed(2)} 万元`);
+            return;
+        }
+        const newAvailable = totalAvailable - totalPending;
+        document.getElementById("totalAvailable").innerText = newAvailable.toFixed(2);
+        document.getElementById("availablePoolDisplay").innerHTML = `💰 可用余额：${newAvailable.toFixed(2)} 万元`;
+
+        pendingItems.forEach(item => {
+            paymentRecords.push({
+                date: new Date().toISOString(),
+                fromSource: "资金池（资产+回款+保证金）",
+                toCustomer: item.customer,
+                toSales: item.sales,
+                amount: item.amount,
+                type: item.type
+            });
+            // 如果是未来回款类型，添加回款计划到 repayPlans
+            if (item.type === 'future' && item.days > 0) {
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + item.days);
+                const dueDateStr = dueDate.toISOString().slice(0,10);
+                if (!repayPlans.some(r => r.lender === item.sales && r.amount === item.amount && r.dueDate === dueDateStr)) {
+                    repayPlans.push({ id: nextId++, lender: item.sales, amount: item.amount, dueDate: dueDateStr });
+                }
+            }
+            // 标记原条目为已付（简单禁用复选框）
+            const targetCheckbox = Array.from(document.querySelectorAll('.pay-checkbox, .future-checkbox')).find(cb =>
+                cb.dataset.customer === item.customer && cb.dataset.sales === item.sales && parseFloat(cb.dataset.amount) === item.amount
+            );
+            if (targetCheckbox) {
+                targetCheckbox.disabled = true;
+                targetCheckbox.checked = false;
+                targetCheckbox.closest('.pay-item')?.classList.add('paid');
+            }
+        });
+        pendingItems = [];
+        renderPendingList();
+        // 重新计算今日要付款公司的总计
+        let newTotalPay = 0;
+        document.querySelectorAll('#todayPayList .pay-item:not(.paid) .pay-checkbox').forEach(cb => {
+            newTotalPay += parseFloat(cb.dataset.amount);
+        });
+        document.getElementById("totalPayAmount").innerText = newTotalPay.toFixed(2);
+        saveMarketData();
+        renderUnifiedCalendar();
+        alert(`付款成功！共支付 ${totalPending.toFixed(2)} 万元`);
+    }
+
+    function repayDebt() {
+        const select = document.getElementById("repaySelect");
+        const selectedId = parseInt(select.value);
+        if (!selectedId) { alert("请选择要还款的资方"); return; }
+        const repayItem = repayPlans.find(r => r.id === selectedId);
+        if (!repayItem) return;
+        const totalAvailable = parseFloat(document.getElementById("totalAvailable").innerText);
+        if (totalAvailable < repayItem.amount) {
+            alert(`可用资金不足，需要 ${repayItem.amount.toFixed(2)} 万元，可用 ${totalAvailable.toFixed(2)} 万元`);
+            return;
+        }
+        const newAvailable = totalAvailable - repayItem.amount;
+        document.getElementById("totalAvailable").innerText = newAvailable.toFixed(2);
+        document.getElementById("availablePoolDisplay").innerHTML = `💰 可用余额：${newAvailable.toFixed(2)} 万元`;
+        paymentRecords.push({
+            date: new Date().toISOString(),
+            fromSource: "资金池（资产+回款+保证金）",
+            toCustomer: `资方 ${repayItem.lender}`,
+            toSales: "",
+            amount: repayItem.amount,
+            type: "repay"
+        });
+        const idx = repayPlans.findIndex(r => r.id === selectedId);
+        if (idx !== -1) repayPlans.splice(idx, 1);
+        saveMarketData();
+        renderPayDashboard();
+        alert(`已还款 ${repayItem.amount.toFixed(2)} 万元给 ${repayItem.lender}`);
+    }
+
+    function exportPaymentRecords() {
+        if (paymentRecords.length === 0) { alert("暂无付款记录"); return; }
+        let csv = "日期,资金来源,收款客户,收款销售,金额(万元),类型\n";
+        paymentRecords.forEach(r => {
+            csv += `${r.date},${r.fromSource},${r.toCustomer},${r.toSales},${r.amount},${r.type}\n`;
+        });
+        const blob = new Blob(["\uFEFF" + csv], {type:"text/csv;charset=utf-8"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `payment_records_${new Date().toISOString()}.csv`;
+        link.click();
+    }
+
+    function renderUnifiedCalendar() {
+        const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
+        const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
+        let gridHtml = "";
+        for (let i = 0; i < firstDay; i++) gridHtml += `<div class="calendar-day"></div>`;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            let backAmount = 0, repayAmount = 0;
+            repayPlans.forEach(r => {
+                if (r.dueDate === dateStr) {
+                    if (lenderNames.includes(r.lender)) repayAmount += r.amount;
+                    else backAmount += r.amount;
+                }
+            });
+            const netAmount = backAmount - repayAmount;
+            let netHtml = "";
+            if (netAmount > 0) {
+                netHtml = `<div class="repay-amount green-amount">💰净回款 ${netAmount.toFixed(0)}万</div>`;
+            } else if (netAmount < 0) {
+                netHtml = `<div class="repay-amount red-amount">💰净还款 ${(-netAmount).toFixed(0)}万</div>`;
+            } else if (backAmount > 0 || repayAmount > 0) {
+                netHtml = `<div class="repay-amount">💰净额 0 万</div>`;
+            }
+            gridHtml += `<div class="calendar-day">${d}${netHtml}</div>`;
+        }
+        document.getElementById("calendarGrid").innerHTML = gridHtml;
+        document.getElementById("currentMonthYear").innerText = `${currentCalendarYear}年${currentCalendarMonth+1}月`;
+
+        // 计算3/5/7日内回款（仅统计 backAmount）
+        const today = new Date();
+        let sum3=0, sum5=0, sum7=0;
+        repayPlans.forEach(r => {
+            if (!lenderNames.includes(r.lender)) {
+                const due = new Date(r.dueDate);
+                const diff = Math.ceil((due - today) / (1000*60*60*24));
+                if (diff >=0 && diff <=3) sum3 += r.amount;
+                if (diff >=0 && diff <=5) sum5 += r.amount;
+                if (diff >=0 && diff <=7) sum7 += r.amount;
+            }
+        });
+        document.getElementById("sum3Days").innerText = sum3.toFixed(2);
+        document.getElementById("sum5Days").innerText = sum5.toFixed(2);
+        document.getElementById("sum7Days").innerText = sum7.toFixed(2);
+    }
+
+    function getOrdersByUser(loginName) { if(loginName==="admin"||loginName==="查看总计"||loginName==="总览") return [...rawOrders]; let bySales=rawOrders.filter(o=>o.sales===loginName); if(bySales.length) return bySales; let byDept=rawOrders.filter(o=>o.dept===loginName); if(byDept.length) return byDept; let byTeam=rawOrders.filter(o=>o.team===loginName); return byTeam; }
+
+    function handleLogin() {
+        let name = document.getElementById("loginName").value.trim();
+        let pwd = document.getElementById("loginPwd").value.trim();
+        if(pwdMap[name] && pwdMap[name] === pwd) {
+            document.getElementById("loginError").style.display = "none";
+            currentUser = name;
+            let orders = getOrdersByUser(name);
+            if(orders.length === 0 && name !== "admin") { alert("该角色无数据"); return; }
+            currentOrders = orders;
+            currentFilteredOrders = [...orders];
+            currentDailyPayments = buildDailyPaymentsFromOrders(currentFilteredOrders);
+            const metrics = computeNewMetrics(currentFilteredOrders, currentDailyPayments);
+            currentMetrics = metrics;
+            renderNewMetrics(metrics);
+            renderAnalysisReport(metrics);
+            renderDailyNumbersList();
+            renderDetailTable(currentFilteredOrders);
+            renderSlicerOptions();
+            renderMemberListForSlice();
+            let salesSelect = document.getElementById("filterSales");
+            let allSales = [...new Set(rawOrders.map(o => o.sales))].sort();
+            salesSelect.innerHTML = '<option value="all">全部销售</option>';
+            allSales.forEach(m => { let opt = document.createElement('option'); opt.value = m; opt.text = m; salesSelect.appendChild(opt); });
+            salesSelect.onchange = (e) => { currentSalesFilter = e.target.value; applyFilters(); };
+            document.getElementById("filterCustomer").oninput = (e) => { currentCustomerFilter = e.target.value; applyFilters(); };
+            const isOverview = (name === "admin" || name === "查看总计" || name === "总览");
+            document.getElementById("rankSection").style.display = isOverview ? "block" : "none";
+            if(isOverview) renderAllRanks();
+            const tabsContainer = document.getElementById("tabsContainer");
+            tabsContainer.innerHTML = '';
+            const tabs = [{id:"User", label:"📋 我的数据"}];
+            if (isOverview) tabs.push({id:"PayDashboard", label:"💳 支付看板"});
+            tabs.forEach(tab => {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                btn.innerText = tab.label;
+                btn.onclick = () => {
+                    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                    document.getElementById(`tab${tab.id}`).classList.add('active');
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if (tab.id === 'PayDashboard') renderPayDashboard();
+                };
+                tabsContainer.appendChild(btn);
+            });
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('tabUser').classList.add('active');
+            if (tabsContainer.firstChild) tabsContainer.firstChild.classList.add('active');
+            loadMarketData();
+            if (isOverview) renderPayDashboard();
+            document.getElementById("loginContainer").style.display = "none";
+            document.getElementById("dashboard").style.display = "block";
+            setTimeout(() => { if (chartInstance) chartInstance.resize(); }, 200);
+        } else {
+            document.getElementById("loginError").style.display = "block";
+        }
+    }
+    function logout() { location.reload(); }
+    function closeModal() { document.getElementById("commonModal").style.display = "none"; }
+    function setView(view) {
+        const container = document.getElementById("appContainer");
+        if (view === 'pc') {
+            container.classList.remove('mobile-layout');
+            container.classList.add('pc-layout');
+            document.getElementById("pcViewBtn").classList.add('active');
+            document.getElementById("mobileViewBtn").classList.remove('active');
+        } else {
+            container.classList.remove('pc-layout');
+            container.classList.add('mobile-layout');
+            document.getElementById("mobileViewBtn").classList.add('active');
+            document.getElementById("pcViewBtn").classList.remove('active');
+        }
+        setTimeout(() => { if (chartInstance) chartInstance.resize(); }, 100);
+    }
+    document.getElementById("pcViewBtn").onclick = () => setView('pc');
+    document.getElementById("mobileViewBtn").onclick = () => setView('mobile');
+    window.addEventListener('resize', () => { if (chartInstance) chartInstance.resize(); });
+    document.getElementById("overdueDetailBtn")?.addEventListener("click", showOverdue);
+    document.getElementById("monthPayDetailBtn")?.addEventListener("click", showMonthPay);
+    document.getElementById("exportAllBtn")?.addEventListener("click", exportFullData);
+    window.closeModal = closeModal;
+    window.calcSurplusExtra = calcSurplusExtra;
+    window.resetFilters = resetFilters;
+    window.confirmPayment = confirmPayment;
+    window.exportPaymentRecords = exportPaymentRecords;
+    window.repayDebt = repayDebt;
+    window.removePendingItem = removePendingItem;
+</script>
+</body>
+</html>

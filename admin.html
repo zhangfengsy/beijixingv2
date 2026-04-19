@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>管理员后台 - 全局操作&付款记录</title>
+    <style>
+        body{background:#0a0f2a;color:#fff;padding:20px;}
+        .box{background:#0c1832;padding:20px;border-radius:12px;margin-bottom:20px;}
+        table{width:100%;border-collapse:collapse;margin-top:10px;}
+        th,td{border:1px solid #2c5a7a;padding:8px;text-align:left;}
+        th{color:#ffdd77;}
+        input{padding:8px;width:300px;}
+        button{padding:8px 16px;background:#2563eb;border:none;border-radius:6px;color:#fff;}
+    </style>
+</head>
+<body>
+    <h2>🔐 管理员全局记录后台</h2>
+    <div class="box">
+        <input type="password" id="adminPwd" placeholder="输入管理员密码">
+        <button onclick="loginAdmin()">进入后台</button>
+    </div>
+
+    <div id="adminContent" style="display:none;">
+        <div class="box">
+            <h3>💰 全员付款账单记录</h3>
+            <div id="payList"></div>
+        </div>
+        <div class="box">
+            <h3>📝 全员操作日志</h3>
+            <div id="logList"></div>
+        </div>
+    </div>
+
+<script>
+// 管理员密码 和你pwdMap里admin一致
+const ADMIN_PWD = "admin888";
+
+async function loginAdmin(){
+    let pwd = document.getElementById("adminPwd").value.trim();
+    if(pwd !== ADMIN_PWD){
+        alert("密码错误");
+        return;
+    }
+    const res = await fetch("/api/get-all-records");
+    const json = await res.json();
+    if(json.code!==0) return;
+
+    // 渲染付款记录
+    let payHtml = `<table><tr><th>操作人</th><th>付款客户</th><th>金额</th><th>时间</th></tr>`;
+    json.pays.forEach(item=>{
+        payHtml += `<tr>
+            <td>${item.userName}</td>
+            <td>${item.payCustomers.join(",")}</td>
+            <td>${item.totalPayAmount}</td>
+            <td>${item.createTime}</td>
+        </tr>`;
+    });
+    payHtml += `</table>`;
+    document.getElementById("payList").innerHTML = payHtml;
+
+    // 渲染操作日志
+    let logHtml = `<table><tr><th>操作人</th><th>操作类型</th><th>内容</th><th>时间</th></tr>`;
+    json.logs.forEach(item=>{
+        logHtml += `<tr>
+            <td>${item.user}</td>
+            <td>${item.action}</td>
+            <td>${item.content}</td>
+            <td>${item.time}</td>
+        </tr>`;
+    });
+    logHtml += `</table>`;
+    document.getElementById("logList").innerHTML = logHtml;
+
+    document.getElementById("adminContent").style.display = "block";
+}
+</script>
+</body>
+</html>
